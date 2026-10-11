@@ -66,6 +66,9 @@ export default function Home() {
           <Link href="/patterns" className="text-sm text-slate-400 hover:text-slate-200">
             Pattern engine →
           </Link>
+          <Link href="/bank" className="text-sm text-slate-400 hover:text-slate-200">
+            Bank app view →
+          </Link>
           <select
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
