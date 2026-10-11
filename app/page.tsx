@@ -1,230 +1,232 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useAegis, MAX_RETRIES } from "@/hooks/useAegis";
-import { sanitize } from "@/services/sanitize";
+import { useAegis } from "@/hooks/useAegis";
 import { bankScam } from "@/demo/bankScam";
-import { RealityPause } from "@/components/RealityPause/RealityPause";
+import { chatScam, chatScamContact } from "@/demo/chatScam";
 import { AttackGraph } from "@/components/AttackGraph/AttackGraph";
 import { RiskBanner } from "@/components/RiskEngine/RiskBanner";
 import { StageBar } from "@/components/ManipulationState/StageBar";
 import { ScamDNACard } from "@/components/ScamDNA/ScamDNACard";
 import { ShadowPathCard } from "@/components/ShadowPath/ShadowPathCard";
 import { PrivacyPanel } from "@/components/PrivacyGate/PrivacyPanel";
+import { CallScreen } from "@/components/Phone/CallScreen";
+import { ChatScreen } from "@/components/Phone/ChatScreen";
+import { PhonePause } from "@/components/Phone/PhonePause";
+import { ChatIcon, PhoneIcon } from "@/components/Phone/Icons";
 
 const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS ?? "ws://localhost:8000/ws";
+const CALL_CONTACT = { name: "Unknown", number: "+91 98•••• ••210" };
+const LIVE_CONTACT = { name: "Unknown", number: "Number hidden by AEGIS" };
+
+type Mode = "call" | "chat";
+type Pending = { text: string; as: "caller" | "user" } | null;
 
 export default function Home() {
   const s = useAegis();
-  const [speed, setSpeed] = useState(1);
-  const [customText, setCustomText] = useState("");
-  const [liveKind, setLiveKind] = useState<"replay" | "custom">("replay");
+  const [mode, setMode] = useState<Mode>("call");
+  const [run, setRun] = useState(0); // remounts the phone so timers start fresh
+  const [dismissed, setDismissed] = useState(false);
+  const [ended, setEnded] = useState<string | null>(null);
+  const [typed, setTyped] = useState(false); // chat is being typed live, not the scripted demo
+  const pending = useRef<Pending>(null);
 
-  const preview = useMemo(() => sanitize(customText), [customText]);
-  const canSend = s.connection === "open";
-
-  const send = (speaker: "caller" | "user") => {
-    if (!customText.trim() || !canSend) return;
-    s.sendTurn(speaker, customText.trim());
-    setCustomText("");
+  const fresh = (m: Mode) => {
+    setMode(m);
+    setRun((n) => n + 1);
+    setDismissed(false);
+    setEnded(null);
   };
 
-  const status = (() => {
-    if (!s.live) {
-      return s.running
-        ? { text: "SIMULATED CALL IN PROGRESS", dot: "animate-pulse bg-red-500" }
-        : { text: "IDLE", dot: "bg-slate-600" };
+  const playCall = () => {
+    fresh("call");
+    setTyped(false);
+    s.play(bankScam, 1);
+  };
+  const playChat = () => {
+    fresh("chat");
+    setTyped(false);
+    s.play(chatScam, 1);
+  };
+
+  // A dashboard opened as /?session=<id> follows a real call captured by the audio client.
+  useEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get("session");
+    if (sid) useAegis.getState().connectLive(`${WS_URL}?session=${encodeURIComponent(sid)}`);
+  }, []);
+
+  // Typing in the chat talks to the AEGIS server; the first message opens the connection.
+  const sendChat = (text: string, as: "caller" | "user") => {
+    if (s.live && s.connection === "open" && typed) {
+      s.sendTurn(as, text);
+      return;
     }
-    switch (s.connection) {
-      case "connecting":
-        return { text: "CONNECTING TO BACKEND…", dot: "animate-pulse bg-amber-400" };
-      case "open":
-        return { text: "LIVE FROM BACKEND", dot: "animate-pulse bg-emerald-400" };
-      case "reconnecting":
-        return {
-          text: `RECONNECTING (${s.attempt}/${MAX_RETRIES})…`,
-          dot: "animate-pulse bg-amber-400",
-        };
-      case "failed":
-        return { text: "BACKEND UNREACHABLE", dot: "bg-red-600" };
-      default:
-        return { text: "IDLE", dot: "bg-slate-600" };
+    fresh("chat");
+    setTyped(true);
+    pending.current = { text, as };
+    s.connectLive(WS_URL);
+  };
+  useEffect(() => {
+    if (s.connection === "open" && pending.current) {
+      const p = pending.current;
+      pending.current = null;
+      useAegis.getState().sendTurn(p.as, p.text);
     }
-  })();
+  }, [s.connection]);
+
+  const stop = (msg: string) => {
+    s.reset();
+    setTyped(false);
+    setEnded(msg);
+  };
+
+  const live = s.live && !typed; // following a real call from the audio client
+  const contact = mode === "chat" ? (typed ? LIVE_CONTACT : chatScamContact) : live ? LIVE_CONTACT : CALL_CONTACT;
+  const showPause = !!s.pause && !dismissed;
+  const failed = s.connection === "failed" || s.errors.length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 bg-slate-950 p-4 text-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <h1 className="font-semibold tracking-wide">AEGIS</h1>
-          <span className="flex items-center gap-2 text-xs text-slate-400">
-            <span className={`h-2 w-2 rounded-full ${status.dot}`} />
-            {status.text}
-          </span>
+    <main className="min-h-screen bg-[#f5f5f4] p-4 text-neutral-900 md:p-6">
+      <header className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-wide">AEGIS</h1>
+          <p className="text-xs text-neutral-500">Stops scam calls and chats before the OTP or the payment</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/patterns" className="text-sm text-slate-400 hover:text-slate-200">
-            Pattern engine →
-          </Link>
-          <Link href="/bank" className="text-sm text-slate-400 hover:text-slate-200">
-            Bank app view →
-          </Link>
-          <select
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            className="rounded bg-slate-800 px-2 py-1 text-sm"
-          >
-            <option value={1}>1x</option>
-            <option value={1.5}>1.5x</option>
-            <option value={2}>2x</option>
-          </select>
-          <button
-            className="rounded bg-emerald-600 px-3 py-1"
-            onClick={() => s.play(bankScam, speed)}
-          >
-            Start demo
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <button onClick={playCall} className="flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-1.5 font-medium text-white hover:bg-neutral-700">
+            <PhoneIcon className="h-4 w-4" /> Play scam call
+          </button>
+          <button onClick={playChat} className="flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-1.5 font-medium text-white hover:bg-neutral-700">
+            <ChatIcon className="h-4 w-4" /> Play scam chat
           </button>
           <button
-            className="rounded bg-indigo-600 px-3 py-1"
             onClick={() => {
-              setLiveKind("replay");
-              s.connectLive(`${WS_URL}?replay=bank_scam&speed=${speed}`);
+              s.reset();
+              setTyped(false);
+              fresh(mode);
             }}
+            className="rounded-full border border-neutral-300 bg-white px-4 py-1.5 hover:bg-neutral-100"
           >
-            Live (replay)
-          </button>
-          <button
-            className="rounded bg-fuchsia-600 px-3 py-1"
-            onClick={() => {
-              setLiveKind("custom");
-              // Open the dashboard as /?session=<call id> to join the same call as the audio client.
-              const sid = new URLSearchParams(window.location.search).get("session");
-              s.connectLive(sid ? `${WS_URL}?session=${encodeURIComponent(sid)}` : WS_URL);
-            }}
-          >
-            Live (custom)
-          </button>
-          <button className="rounded bg-slate-700 px-3 py-1" onClick={s.reset}>
             Reset
           </button>
-        </div>
+          <Link href="/bank" className="px-2 text-neutral-500 hover:text-neutral-900">
+            Bank app view
+          </Link>
+          <Link href="/patterns" className="px-2 text-neutral-500 hover:text-neutral-900">
+            Patterns
+          </Link>
+        </nav>
       </header>
 
-      {(s.errors.length > 0 || s.notice) && (
-        <div className="flex items-start justify-between gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">
-          <div className="space-y-1">
-            {s.notice && <p className="text-amber-300">{s.notice}</p>}
-            {s.errors.map((msg, i) => (
-              <p key={i} className="text-red-300">
-                Backend error: {msg}
-              </p>
-            ))}
-          </div>
-          <button
-            onClick={s.clearErrors}
-            className="shrink-0 rounded bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
-          >
+      {failed && (
+        <div className="mx-auto mt-4 flex max-w-7xl items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          <p>
+            {s.errors.length > 0
+              ? s.errors[s.errors.length - 1]
+              : "Can't reach the AEGIS server. The demo call and chat still work; typing your own messages needs the backend running."}
+          </p>
+          <button onClick={s.clearErrors} className="shrink-0 text-xs text-red-700 hover:text-red-900">
             Dismiss
           </button>
         </div>
       )}
 
-      <RiskBanner />
-
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
-        <div className="max-h-[520px] space-y-4 overflow-auto rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-          <div>
-            <h2 className="mb-2 text-xs uppercase tracking-widest text-slate-400">
-              Live interaction (redacted)
-            </h2>
-            {s.transcript.length === 0 && (
-              <p className="text-sm text-slate-500">Press Start demo or a Live button.</p>
-            )}
-            {s.transcript.map((t, i) => (
-              <p key={i} className="mb-2 text-sm text-slate-200">
-                <span className="text-slate-500">{t.speaker}:</span> {t.text}
-              </p>
+      <div className="mx-auto mt-5 grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
+        {/* The user's phone */}
+        <section className="mx-auto w-full max-w-[380px]">
+          <div className="mb-3 flex justify-center gap-1 rounded-full border border-neutral-200 bg-white p-1 text-sm">
+            {(["call", "chat"] as Mode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  if (m !== mode) {
+                    s.reset();
+                    setTyped(false);
+                    fresh(m);
+                  }
+                }}
+                className={`flex-1 rounded-full py-1.5 ${mode === m ? "bg-neutral-900 font-medium text-white" : "text-neutral-500"}`}
+              >
+                {m === "call" ? "Phone call" : "Chat"}
+              </button>
             ))}
+          </div>
+          <div className="relative h-[720px] overflow-hidden rounded-[2.75rem] border-[10px] border-neutral-900 bg-black shadow-xl">
+            <div className="absolute left-1/2 top-2 z-30 h-5 w-24 -translate-x-1/2 rounded-full bg-black" />
+            {mode === "call" ? (
+              <CallScreen
+                key={run}
+                contact={contact}
+                lines={s.transcript}
+                active={s.running}
+                level={s.risk.level}
+                drivers={s.risk.drivers}
+                onEnd={() => stop("Call ended.")}
+              />
+            ) : (
+              <ChatScreen
+                key={run}
+                contact={contact}
+                lines={s.transcript}
+                level={s.risk.level}
+                drivers={s.risk.drivers}
+                onSend={sendChat}
+                canType
+              />
+            )}
+            {showPause && (
+              <PhonePause
+                channel={mode}
+                explanation={s.pause?.explanation}
+                reasons={s.pause?.reasons ?? []}
+                onStop={() =>
+                  stop(mode === "call" ? "You hung up before sharing anything." : "You stopped replying and blocked the number.")
+                }
+                onContinue={() => setDismissed(true)}
+              />
+            )}
+            {ended && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-white px-8 text-center">
+                <p className="text-lg font-medium">{ended}</p>
+                <p className="text-sm text-neutral-500">
+                  Call your bank on the number printed on your card, or the cyber-fraud helpline 1930.
+                </p>
+                <button onClick={() => setEnded(null)} className="mt-2 rounded-full bg-neutral-900 px-4 py-1.5 text-sm text-white">
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="mt-3 text-center text-[11px] text-neutral-500">
+            Names, numbers, UPI IDs and OTPs are removed on the phone before AEGIS analyses anything.
+          </p>
+        </section>
 
-            {s.live && (
-              <div className="mt-4">
-                <form
-                  className="flex gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    send("caller");
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={customText}
-                    onChange={(e) => setCustomText(e.target.value)}
-                    disabled={!canSend}
-                    placeholder={canSend ? "Type a message..." : "Waiting for connection..."}
-                    className="flex-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-slate-500 disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!canSend}
-                    className="rounded bg-emerald-600 px-3 py-1 text-sm font-medium disabled:opacity-50"
-                  >
-                    Caller
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canSend}
-                    onClick={() => send("user")}
-                    className="rounded bg-indigo-600 px-3 py-1 text-sm font-medium disabled:opacity-50"
-                  >
-                    User
-                  </button>
-                </form>
-
-                {customText && preview.count > 0 && (
-                  <p className="mt-2 text-xs text-sky-300">
-                    Will be sent as: {preview.text}
+        {/* What AEGIS sees */}
+        <section className="space-y-4">
+          <RiskBanner />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <StageBar />
+            <div className="max-h-[260px] overflow-auto rounded-xl border border-neutral-200 bg-white p-4">
+              <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-500">What the scammer did</h2>
+              {s.signals.length === 0 && <p className="text-sm text-neutral-400">Nothing suspicious yet.</p>}
+              {s.signals.map((g, i) => (
+                <div key={i} className="mb-2">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${g.severity === "critical" ? "bg-red-600" : "bg-amber-500"}`} />
+                    {g.label}
                   </p>
-                )}
-
-                <p className="mt-2 text-[11px] leading-snug text-slate-500">
-                  Typed text is redacted in this browser before it is sent (rule-based: names,
-                  phone numbers, account numbers, UPI IDs, emails; unusual names can slip
-                  through). Removed so far: {s.redactedBeforeSend}.
-                  {liveKind === "replay" &&
-                    " The replay scenario itself is read by the backend from its own file."}
-                </p>
-              </div>
-            )}
+                  <p className="pl-4 text-xs italic text-neutral-500">“{g.evidence}”</p>
+                </div>
+              ))}
+            </div>
+            <ScamDNACard />
+            <ShadowPathCard />
           </div>
-          <div>
-            <h2 className="mb-2 text-xs uppercase tracking-widest text-slate-400">Signals</h2>
-            {s.signals.map((g, i) => (
-              <div key={i} className="mb-2">
-                <p
-                  className={`text-sm ${
-                    g.severity === "critical" ? "text-red-400" : "text-amber-400"
-                  }`}
-                >
-                  {g.severity === "critical" ? "⚠" : "✓"} {g.label}
-                </p>
-                <p className="text-xs text-slate-500">{g.evidence}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <AttackGraph />
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StageBar />
-        <ScamDNACard />
-        <ShadowPathCard />
-        <PrivacyPanel />
-      </section>
-
-      {s.pause && (
-        <RealityPause reasons={s.pause.reasons} explanation={s.pause.explanation} onClose={s.reset} />
-      )}
+          <AttackGraph />
+          <PrivacyPanel />
+        </section>
+      </div>
     </main>
   );
 }

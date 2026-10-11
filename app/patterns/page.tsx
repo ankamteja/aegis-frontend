@@ -63,10 +63,10 @@ function pickDistinct(list: Incident[], n = 3): Incident[] {
 
 function Row({ inc, predicted }: { inc: Incident; predicted?: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
       <div className="flex items-baseline justify-between">
         <span className="font-medium">{inc.label}</span>
-        <span className="text-xs text-slate-500">{inc.surface}</span>
+        <span className="text-xs text-neutral-500">{inc.surface}</span>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {inc.steps.map((st, i) => (
@@ -74,12 +74,12 @@ function Row({ inc, predicted }: { inc: Incident; predicted?: string }) {
             <span className={`rounded border px-2 py-1 text-xs ${stepColor(st)}`}>
               {stepLabel(st)}
             </span>
-            {(i < inc.steps.length - 1 || predicted) && <span className="text-slate-600">→</span>}
+            {(i < inc.steps.length - 1 || predicted) && <span className="text-neutral-400">→</span>}
           </span>
         ))}
         {predicted && (
-          <span className="rounded border-2 border-dashed border-amber-400 px-2 py-1 text-xs text-amber-300">
-            🔮 {predicted}
+          <span className="rounded border-2 border-dashed border-amber-500 px-2 py-1 text-xs text-amber-900">
+            {predicted}
           </span>
         )}
       </div>
@@ -132,15 +132,15 @@ export default function Patterns() {
   const pred = predictNext(newIncident.steps, fromBackend ? library : demoIncidents);
 
   return (
-    <main className="mx-auto min-h-screen max-w-4xl space-y-4 bg-slate-950 p-4 text-slate-100">
+    <main className="mx-auto min-h-screen max-w-4xl space-y-4 bg-[#f5f5f4] p-4 text-neutral-900">
       <header className="flex items-center justify-between">
         <h1 className="font-semibold tracking-wide">AEGIS · Pattern engine</h1>
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Live call
+          <Link href="/" className="text-sm text-neutral-500 hover:text-neutral-900">
+            ← Back
           </Link>
           <button
-            className="rounded bg-emerald-600 px-3 py-1"
+            className="rounded bg-neutral-900 text-white px-3 py-1"
             onClick={() => {
               setStep(1);
               setPlaying(true);
@@ -149,7 +149,7 @@ export default function Patterns() {
             Start
           </button>
           <button
-            className="rounded bg-slate-700 px-3 py-1"
+            className="rounded bg-neutral-200 px-3 py-1"
             onClick={() => {
               setStep(0);
               setPlaying(false);
@@ -160,9 +160,9 @@ export default function Patterns() {
         </div>
       </header>
 
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-neutral-500">
         Different brands, languages and channels. Same underlying workflow. Anonymized incidents.
-        <span className="ml-2 text-xs text-slate-600">
+        <span className="ml-2 text-xs text-neutral-400">
           Source: {fromBackend ? `backend library (${library.length} incidents)` : "demo data"}
         </span>
       </p>
@@ -172,13 +172,13 @@ export default function Patterns() {
       ))}
 
       {step >= n + 1 && (
-        <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-5 text-center">
-          <div className="text-xs uppercase tracking-widest text-sky-300">
+        <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-5 text-center">
+          <div className="text-xs uppercase tracking-widest text-neutral-900">
             Structural similarity
           </div>
-          <div className="mt-1 text-5xl font-semibold text-sky-200">{sim}%</div>
-          <div className="text-sm text-slate-300">average across the incidents above</div>
-          <div className="mt-1 text-[11px] text-slate-500">
+          <div className="mt-1 text-5xl font-semibold text-neutral-700">{sim}%</div>
+          <div className="text-sm text-neutral-700">average across the incidents above</div>
+          <div className="mt-1 text-[11px] text-neutral-500">
             Computed from step order (longest common subsequence), ignoring brand and channel names.
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function Patterns() {
             predicted={pred ? stepLabel(pred.next) : undefined}
           />
           {pred && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
               AEGIS recognizes the pattern <b>before the money step</b>. Likely next:{" "}
               <b>{stepLabel(pred.next)}</b>, matched in {pred.votes} of {pred.total} known
               incidents. Early warning would trigger now.

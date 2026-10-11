@@ -5,16 +5,13 @@ export function PrivacyPanel() {
   const p = useAegis((s) => s.privacy);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-      <h2 className="text-xs uppercase tracking-widest text-slate-400">Privacy gate</h2>
-      <dl className="mt-3 space-y-1 text-sm">
-        <div className="flex justify-between"><dt className="text-slate-400">Personal entities found</dt><dd>{p.detected}</dd></div>
-        <div className="flex justify-between"><dt className="text-slate-400">Removed</dt><dd>{p.removed}</dd></div>
-        <div className="flex justify-between"><dt className="text-slate-400">Shown or sent on</dt><dd className="text-emerald-400">{p.transmitted}</dd></div>
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">Privacy</h2>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div><dd className="text-2xl font-semibold">{p.detected}</dd><dt className="text-[11px] text-neutral-500">personal details found</dt></div>
+        <div><dd className="text-2xl font-semibold">{p.removed}</dd><dt className="text-[11px] text-neutral-500">removed on the phone</dt></div>
+        <div><dd className="text-2xl font-semibold">{p.transmitted}</dd><dt className="text-[11px] text-neutral-500">sent anywhere</dt></div>
       </dl>
-      <p className="mt-3 text-[10px] text-slate-500">
-        Redaction runs in this browser before anything is displayed. Nothing leaves this page.
-      </p>
     </div>
   );
 }

@@ -3,42 +3,38 @@ import { useAegis } from "@/hooks/useAegis";
 import type { Stage } from "@/types/events";
 
 const STAGES: Stage[] = ["TRUST", "AUTHORITY", "URGENCY", "ISOLATION", "COMPLIANCE", "MONEY_MOVEMENT"];
+const NAME: Record<Stage, string> = {
+  TRUST: "Trust",
+  AUTHORITY: "Authority",
+  URGENCY: "Urgency",
+  ISOLATION: "Isolation",
+  COMPLIANCE: "Compliance",
+  MONEY_MOVEMENT: "Money",
+};
 
 export function StageBar() {
   const stage = useAegis((s) => s.stage);
   const current = stage ? STAGES.indexOf(stage.stage) : -1;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-      <h2 className="text-xs uppercase tracking-widest text-slate-400">Manipulation stage</h2>
-      <div className="mt-3 flex flex-wrap gap-1.5">
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">Where the scam is</h2>
+      <ol className="mt-3 grid grid-cols-6 gap-1">
         {STAGES.map((st, i) => (
-          <span
-            key={st}
-            className={`rounded px-2 py-0.5 text-[11px] ${
-              i === current
-                ? "bg-amber-500 font-semibold text-slate-950"
-                : i < current
-                ? "bg-slate-600 text-slate-100"
-                : "bg-slate-800 text-slate-500"
-            }`}
-          >
-            {st.replace("_", " ")}
-          </span>
+          <li key={st} className="text-center">
+            <div
+              className={`h-1.5 rounded-full ${
+                i < current ? "bg-neutral-400" : i === current ? (st === "MONEY_MOVEMENT" ? "bg-red-600" : "bg-neutral-900") : "bg-neutral-200"
+              }`}
+            />
+            <span className={`mt-1 block text-[10px] ${i === current ? "font-semibold text-neutral-900" : "text-neutral-400"}`}>
+              {NAME[st]}
+            </span>
+          </li>
         ))}
-      </div>
-      <div className="mt-3 h-2 overflow-hidden rounded bg-slate-800">
-        <div
-          className="h-full bg-amber-500 transition-all duration-700"
-          style={{ width: `${Math.round((stage?.progress ?? 0) * 100)}%` }}
-        />
-      </div>
-      <p className="mt-2 min-h-[2.5rem] text-xs text-slate-300">
-        {stage?.reason ?? "Waiting for interaction..."}
-      </p>
-      <p className="text-[10px] text-slate-500">
-        Based on observable communication signals, not the user&apos;s mind.
-      </p>
+      </ol>
+      <p className="mt-3 min-h-[2.5rem] text-sm text-neutral-700">{stage?.reason ?? "Waiting for the conversation."}</p>
+      <p className="text-[10px] text-neutral-400">From what the caller says, not a guess about the user.</p>
     </div>
   );
 }

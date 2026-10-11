@@ -4,6 +4,7 @@ export type RiskLevel = "NORMAL" | "WATCH" | "INTERVENE" | "CRITICAL";
 // Plain-language alert produced by aegis-core (explain.py), in English and Hindi.
 export type Bilingual = { en: string; hi: string };
 export type Explanation = {
+  level?: string; // "caution" | "pause" from core
   headline: Bilingual;
   reasons: (Bilingual & { signal: string; quote: string })[];
   advice: Bilingual[];

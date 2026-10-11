@@ -7,24 +7,21 @@ export function ShadowPathCard() {
   const current = signals.length ? signals[signals.length - 1].label : null;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-      <h2 className="text-xs uppercase tracking-widest text-slate-400">ShadowPath</h2>
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <h2 className="text-xs font-medium uppercase tracking-wider text-neutral-500">What the scammer will ask next</h2>
       {path ? (
         <>
-          <div className="mt-3 text-xs text-slate-400">Current</div>
-          <div className="text-sm text-slate-200">{current}</div>
-          <div className="my-1 text-slate-600">↓</div>
-          <div className="text-xs text-amber-400">🔮 Likely next step</div>
-          <div className="text-base font-semibold text-amber-300">{path.next}</div>
-          <div className="text-xs text-slate-400">Confidence: {path.confidence}%</div>
-          <ul className="mt-2 space-y-0.5 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-neutral-500">Now: {current}</p>
+          <p className="mt-1 text-lg font-semibold text-neutral-900">{path.next}</p>
+          <p className="text-xs text-neutral-500">{path.confidence}% likely</p>
+          <ul className="mt-2 space-y-0.5 text-xs text-neutral-500">
             {path.evidence.map((e) => (
-              <li key={e}>• {e}</li>
+              <li key={e}>{e}</li>
             ))}
           </ul>
         </>
       ) : (
-        <p className="mt-3 text-sm text-slate-500">Not enough evidence to predict yet...</p>
+        <p className="mt-3 text-sm text-neutral-400">Not enough to predict yet.</p>
       )}
     </div>
   );
