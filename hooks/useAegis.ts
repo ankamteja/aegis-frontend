@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AegisEvent, Stage, RiskLevel } from "@/types/events";
+import { AegisEvent, Stage, RiskLevel, Explanation } from "@/types/events";
 import { sanitize } from "@/services/sanitize";
 
 export type Connection = "idle" | "connecting" | "open" | "reconnecting" | "failed";
@@ -16,7 +16,7 @@ type State = {
   path?: { next: string; confidence: number; evidence: string[] };
   risk: { level: RiskLevel; drivers: string[] };
   privacy: { detected: number; removed: number; transmitted: number };
-  pause?: { reasons: string[] };
+  pause?: { reasons: string[]; explanation?: Explanation };
   running: boolean;
   live: boolean;
   connection: Connection;

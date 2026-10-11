@@ -94,7 +94,9 @@ export default function Home() {
             className="rounded bg-fuchsia-600 px-3 py-1"
             onClick={() => {
               setLiveKind("custom");
-              s.connectLive(WS_URL);
+              // Open the dashboard as /?session=<call id> to join the same call as the audio client.
+              const sid = new URLSearchParams(window.location.search).get("session");
+              s.connectLive(sid ? `${WS_URL}?session=${encodeURIComponent(sid)}` : WS_URL);
             }}
           >
             Live (custom)
@@ -217,7 +219,9 @@ export default function Home() {
         <PrivacyPanel />
       </section>
 
-      {s.pause && <RealityPause reasons={s.pause.reasons} onClose={s.reset} />}
+      {s.pause && (
+        <RealityPause reasons={s.pause.reasons} explanation={s.pause.explanation} onClose={s.reset} />
+      )}
     </main>
   );
 }
